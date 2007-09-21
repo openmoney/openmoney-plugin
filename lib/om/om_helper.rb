@@ -115,6 +115,10 @@ module OpenMoneyHelper
       'es' => ":declaring_account reconoce :accepting_account por :description en la cantidad de :amount #{taxable ? '(ingreso imponible :taxable) ' : ''} :acknowledge_flow",
   	  'fr' => ":declaring_account remercie :accepting_account pour :description et lui verse la somme de :amount #{taxable ? '(imposable :taxable) ' : ''}:acknowledge_flow"
   	}
+  	currency_spec['summary_form'] = {
+      'en' => "Balance: :balance",
+      'es' => "Balance: :balance"
+  	}
   	currency_spec
   end
   def currency_select(html_field_name,selected,account = nil)
@@ -218,21 +222,25 @@ module OpenMoneyHelper
   ################################################################################
   # Helper that returns the flows summary of a currency
   def summary(account,currency_omrl,options = {})
-    language = options[:language] ||= 'en'
     currency_spec = account.currency_specification(currency_omrl)
     if currency_spec.has_key?('summaries')
-      s = currency_spec['summaries'][account.omrl]
-
-      form = currency_spec["summary_form"][language]
-      form ||= currency_spec["summary_form"]['en']
-      form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
-        s[$1]
-      end
+      render_summary(currency_spec,account.omrl,options)
     else
       nil
     end
   end
+  
+  def render_summary(currency_spec,account_omrl,options = {})
+    language = options[:language] ||= 'en'
+    s = currency_spec['summaries'][account_omrl]
 
+    form = currency_spec["summary_form"][language]
+    form ||= currency_spec["summary_form"]['en']
+    form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
+      s[$1]
+    end
+  end
+  
   ################################################################################
   # Helper that returns the flows of a currency as specified by the options
   # as well as the header field names in the correct language.

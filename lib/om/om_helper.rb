@@ -137,32 +137,53 @@ module OpenMoneyHelper
     l.collect {|o| unit = o[0];%Q|<option value="#{unit}">#{o[1]} (#{UnitToHTMLMap[unit]})</option>|}.join("\n")
   end
 
-  def input_form(currency_spec,language = "en",pre_specified_fields = {})
+
+  ################################################################################
+  # Helper to convert the currency spec into an html form
+  # options:
+  #  +langauge
+  #  +pre_specified_fields: hash used to to display values (like a declaring_account)
+  #   instead of asking the user for them.
+  def input_form(currency_spec,options = {})
+    language = options[:language] ||= 'en'
+    pre_specified_fields = options[:pre_specified_fields]
+    
     field_spec = currency_spec["fields"]
     form = currency_spec["input_form"][language]
     form ||= currency_spec["input_form"]['en']
     form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
-      if pre_specified_fields.has_key?($1)
-        pre_specified_fields($1)
+      if pre_specified_fields && pre_specified_fields.has_key?($1)
+        pre_specified_fields[$1]
       else
         render_field($1,field_spec,language)
       end
     end
   end
 
+  ################################################################################
+  # get_field_spec interprets the field spec according to type.  It allows the field spec
+  # to be:
+  # 1- a string which is the type. In which case the type is set and the description
+  #    becomes a capitalized version of the field name
+  # 2- an Array, in which the array is exepected to be the values enumeration for for
+  #    the field (and the description is again pulled from the field name)
+  # 3- or a has in which case, the only thing that's done is that the description is
+  #    generated from the field name if it's missing.
   def get_field_spec(field_name,field_spec)
     fspec = field_spec[field_name]
-    fspec = field_name if fspec.nil?
+    fspec ||= field_name
     case
     when fspec.is_a?(String)
       fspec = {'type' => fspec}
     when fspec.is_a?(Array)
       fspec = {'values_enum' => fspec}
     end
-    fspec['description'] = field_name.gsub(/_/,' ').capitalize if !fspec['description']
+    fspec['description'] ||= field_name.gsub(/_/,' ').capitalize
     fspec
   end
 
+  ################################################################################
+  # renders and individual field in the input form specification according to choosen language
   def render_field(field_name,field_spec,language = 'en')
     fspec = get_field_spec(field_name,field_spec)
 
@@ -192,7 +213,18 @@ module OpenMoneyHelper
     end
   end
 
-  def history(account, currency_omrl,sort_order = nil,language = "en",count = 20,page = 0)
+  ################################################################################
+  # Helper that returns the flows of a currency as specified by the options
+  # as well as the header field names in the correct language.
+  def history(account, currency_omrl,options = {})
+    config = {
+      :language  => 'en',
+      :sort_order => nil,
+      :count => 20,
+      :page => 0,
+    }.update(options)
+    sort_order = config[:sort_order]
+        
     account_omrl = account.omrl
     flows = Flow.find(:all, :params => { :with => account_omrl, :in_currency => currency_omrl })
     fields = account.currency_specification(currency_omrl)['fields']
@@ -203,7 +235,7 @@ module OpenMoneyHelper
       type = fspec['type']
       if type != 'submit'  && type != 'unit'
         field_description = fspec['description']
-        field_description = field_description[language] if field_description.is_a?(Hash)
+        field_description = field_description[config[:language]] if field_description.is_a?(Hash)
         f[name] = field_description
       end
     end

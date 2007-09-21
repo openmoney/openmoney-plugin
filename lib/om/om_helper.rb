@@ -196,7 +196,9 @@ module OpenMoneyHelper
     case 
     when fspec['values_enum']
       enum = fspec['values_enum']
-      enum = enum[language] if enum.is_a?(Hash)
+      if enum.is_a?(Hash)
+        enum = enum[enum.has_key?(language) ? language : 'en' ]
+      end
       select_tag(html_field_name,options_for_select(enum,@params[field_name]))
     when field_type == "boolean"
       select_tag(html_field_name,options_for_select([[l('Yes'), "true"], [l('No'), "false"]],@params[field_name]))
@@ -210,6 +212,24 @@ module OpenMoneyHelper
       UnitToHTMLMap[field_name]
     else
       text_field_tag(field_name,@params[field_name])
+    end
+  end
+
+  ################################################################################
+  # Helper that returns the flows summary of a currency
+  def summary(account,currency_omrl,options = {})
+    language = options[:language] ||= 'en'
+    currency_spec = account.currency_specification(currency_omrl)
+    if currency_spec.has_key?('summaries')
+      s = currency_spec['summaries'][account.omrl]
+
+      form = currency_spec["summary_form"][language]
+      form ||= currency_spec["summary_form"]['en']
+      form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
+        s[$1]
+      end
+    else
+      nil
     end
   end
 

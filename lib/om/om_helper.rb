@@ -135,9 +135,9 @@ module OpenMoneyHelper
     select_tag(html_field_name, unit_of_measure_options_for_select)
   end
   
-  def unit_of_measure_options_for_select(language = 'en')
+  def unit_of_measure_options_for_select(language = OpenMoneyDefaultLanguage)
     l = UnitToLanguage[language]
-    l ||= UnitToLanguage['en']
+    l ||= UnitToLanguage[OpenMoneyDefaultLanguage]
     l.collect {|o| unit = o[0];%Q|<option value="#{unit}">#{o[1]} (#{UnitToHTMLMap[unit]})</option>|}.join("\n")
   end
 
@@ -149,12 +149,12 @@ module OpenMoneyHelper
   #  +pre_specified_fields: hash used to to display values (like a declaring_account)
   #   instead of asking the user for them.
   def input_form(currency_spec,options = {})
-    language = options[:language] ||= 'en'
+    language = options[:language] ||= OpenMoneyDefaultLanguage
     pre_specified_fields = options[:pre_specified_fields]
     
     field_spec = currency_spec["fields"]
     form = currency_spec["input_form"][language]
-    form ||= currency_spec["input_form"]['en']
+    form ||= currency_spec["input_form"][OpenMoneyDefaultLanguage]
     form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
       if pre_specified_fields && pre_specified_fields.has_key?($1)
         pre_specified_fields[$1]
@@ -188,7 +188,7 @@ module OpenMoneyHelper
 
   ################################################################################
   # renders and individual field in the input form specification according to choosen language
-  def render_field(field_name,field_spec,language = 'en')
+  def render_field(field_name,field_spec,language = OpenMoneyDefaultLanguage)
     fspec = get_field_spec(field_name,field_spec)
 
     html_field_name = "flow_spec[#{field_name}]"
@@ -201,7 +201,7 @@ module OpenMoneyHelper
     when fspec['values_enum']
       enum = fspec['values_enum']
       if enum.is_a?(Hash)
-        enum = enum[enum.has_key?(language) ? language : 'en' ]
+        enum = enum[enum.has_key?(language) ? language : OpenMoneyDefaultLanguage ]
       end
       select_tag(html_field_name,options_for_select(enum,@params[field_name]))
     when field_type == "boolean"
@@ -219,43 +219,33 @@ module OpenMoneyHelper
     end
   end
 
+  
   ################################################################################
   # Helper that returns the flows summary of a currency
-  def summary(account,currency_omrl,options = {})
-    currency_spec = account.currency_specification(currency_omrl)
-    if currency_spec.has_key?('summaries')
-      render_summary(currency_spec,account.omrl,options)
-    else
-      nil
-    end
-  end
-  
-  def render_summary(currency_spec,account_omrl,options = {})
-    language = options[:language] ||= 'en'
-    s = currency_spec['summaries'][account_omrl]
+  def render_summary(summary_form,summary,options = {})
+    language = options[:language] ||= OpenMoneyDefaultLanguage
 
-    form = currency_spec["summary_form"][language]
-    form ||= currency_spec["summary_form"]['en']
+    form = summary_form[language]
+    form ||= summary_form[OpenMoneyDefaultLanguage]
     form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
-      s[$1]
+      summary[$1]
     end
   end
   
   ################################################################################
   # Helper that returns the flows of a currency as specified by the options
   # as well as the header field names in the correct language.
-  def history(account, currency_omrl,options = {})
+  def history(account_omrl,currency_omrl,currency_spec,options = {})
     config = {
-      :language  => 'en',
+      :language  => OpenMoneyDefaultLanguage,
       :sort_order => nil,
       :count => 20,
       :page => 0,
     }.update(options)
     sort_order = config[:sort_order]
         
-    account_omrl = account.omrl
     flows = Flow.find(:all, :params => { :with => account_omrl, :in_currency => currency_omrl })
-    fields = account.currency_specification(currency_omrl)['fields']
+    fields = currency_spec['fields']
     f = {}
 
     fields.keys.each do |name|

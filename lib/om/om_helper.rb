@@ -223,6 +223,7 @@ module OpenMoneyHelper
   ################################################################################
   # Helper that returns the flows summary of a currency
   def render_summary(summary_form,summary,options = {})
+    return '' if summary.nil?
     language = options[:language] ||= OpenMoneyDefaultLanguage
 
     form = summary_form[language]

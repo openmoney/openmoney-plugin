@@ -116,8 +116,8 @@ module OpenMoneyHelper
   	  'fr' => ":declaring_account remercie :accepting_account pour :description et lui verse la somme de :amount #{taxable ? '(imposable :taxable) ' : ''}:acknowledge_flow"
   	}
   	currency_spec['summary_form'] = {
-      'en' => "Balance: :balance",
-      'es' => "Balance: :balance"
+      'en' => "Balance: :balance, Volume :volume",
+      'es' => "Balance: :balance, Volumen :volume"
   	}
   	currency_spec
   end

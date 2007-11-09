@@ -62,7 +62,7 @@ module OpenMoneyHelper
   		['other' , 'other'],      
     ]
   }
-  def default_mutal_credit_currency_fields(taxable=true,unit='USD')
+  def default_mutual_credit_currency_fields(description=true,taxable=false,unit='USD')
     fields = {
       'amount' => {
         'type' => 'float',
@@ -70,14 +70,6 @@ module OpenMoneyHelper
           'en' => 'Amount',
           'es' => 'Cantidad',
           'fr' => 'Quantité'
-        }
-      },
-    	'description' => {
-        'type' => 'text',
-        'description' => {
-          'en' => 'Description',
-          'es' => 'Descripción',
-          'fr' => 'Description'
         }
       },
     	'acknowledge_flow' => {
@@ -90,6 +82,15 @@ module OpenMoneyHelper
     	},
     	unit => 'unit'
     }
+    fields['description'] = {
+      'type' => 'text',
+      'description' => {
+        'en' => 'Description',
+        'es' => 'Descripción',
+        'fr' => 'Description'
+      }
+    } if description
+  	
     fields['taxable'] = {
       'type' => 'boolean',
       'description' => {
@@ -106,14 +107,14 @@ module OpenMoneyHelper
     fields
   end
   
-  def default_mutual_credit_currency(taxable=true,unit='USD')
+  def default_mutual_credit_currency(description=true,taxable=false,unit='USD')
     currency_spec = {}
-    currency_spec['fields'] = default_mutal_credit_currency_fields(taxable,unit)
+    currency_spec['fields'] = default_mutual_credit_currency_fields(description,taxable,unit)
   	currency_spec['summary_type'] = 'balance(amount)'
   	currency_spec['input_form'] = {
-  	  'en' => ":declaring_account acknowledges :accepting_account for :description in the amount of :amount #{taxable ? '(taxable :taxable) ' : ''}:acknowledge_flow",
-      'es' => ":declaring_account reconoce :accepting_account por :description en la cantidad de :amount #{taxable ? '(ingreso imponible :taxable) ' : ''} :acknowledge_flow",
-  	  'fr' => ":declaring_account remercie :accepting_account pour :description et lui verse la somme de :amount #{taxable ? '(imposable :taxable) ' : ''}:acknowledge_flow"
+  	  'en' => ":declaring_account acknowledges :accepting_account#{description ? ' for :description' : '' } in the amount of :amount #{taxable ? '(taxable :taxable) ' : ''}:acknowledge_flow",
+      'es' => ":declaring_account reconoce :accepting_account#{description ? ' por :description' : '' } en la cantidad de :amount #{taxable ? '(ingreso imponible :taxable) ' : ''} :acknowledge_flow",
+  	  'fr' => ":declaring_account remercie :accepting_account#{description ? 'pour :description' : '' } et lui verse la somme de :amount #{taxable ? '(imposable :taxable) ' : ''}:acknowledge_flow"
   	}
   	currency_spec['summary_form'] = {
       'en' => "Balance: :balance, Volume :volume",
@@ -121,6 +122,59 @@ module OpenMoneyHelper
   	}
   	currency_spec
   end
+  
+  def default_reputation_currency(rating_type)
+    r = { 
+      'type' => 'integer',
+      'description' => {
+        'en' => 'Rating',
+        'es' => 'Calificacíon'
+      },
+      'values_enum' =>   {
+    		"2qual" => {
+          'en' => [['Good',1],['Bad',2]],
+          'es' => [['Bueno',1],['Malo',2]],
+        },
+    		"2yesno" => {
+    		  'en' => [['Yes',2],['No',1]],
+    		  'es' => [['Si',2],['No',1]],
+    		},
+    		"3qual" => {
+    		  'en' => [['Good',3],['Average',2],['Bad',1]],
+    		  'es' => [['Bueno',3],['Mediano',2],['Malo',1]],
+    		},
+    		"4qual" => {
+    		  'en' => [['Excellent',4],['Good',3],['Average',2],['Bad',1]],
+    		  'es' => [['Excellente',4],['Bueno',3],['Mediano',2],['Malo',1]],
+    		},
+    		"3stars" => [['***',3],['**',2],['*',1]],
+    		"4stars" => [['****',4],['***',3],['**',2],['*',1]],
+    		"5stars" => [['*****',5],['****',4],['***',3],['**',2],['*',1]],
+    		"3" => (1..3).to_a,
+    		"4" => (1..4).to_a,
+    		"5" => (1..5).to_a,
+    		"10" => (1..10).to_a
+      }[rating_type]
+    }      
+    currency_spec = {}
+    currency_spec['fields'] = {
+    	'rate' => {
+        'type' => 'submit',
+    	},
+      'rating' => r,
+    }
+  	currency_spec['summary_type'] = 'average(rating)'
+  	currency_spec['input_form'] = {
+  	  'en' => ":declaring_account rates :accepting_account as :rating :rate",
+  	  'es' => ":declaring_account califica :accepting_account como :rating :rate"
+  	}
+  	currency_spec['summary_form'] = {
+  	  'en' => ":Overall rating: :average_accepted (from :count_accepted total ratings)",
+      'es' => "Calificacíon: :average_accepted (de :count_accepted calificacíones)"
+  	}
+  	currency_spec    
+  end
+  
   def currency_select(html_field_name,selected,account = nil)
     c = Currency.find(:all).collect{|e| e.omrl.chop}
     select_tag(html_field_name,options_for_select(c,selected))

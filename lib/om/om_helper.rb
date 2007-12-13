@@ -298,8 +298,9 @@ module OpenMoneyHelper
       :page => 0,
     }.update(options)
     sort_order = config[:sort_order]
-        
-    flows = Flow.find(:all, :params => { :with => account_omrl, :in_currency => currency_omrl })
+    params = {:in_currency => currency_omrl }
+    params[:with] = account_omrl if account_omrl
+    flows = Flow.find(:all, :params => params)
     fields = currency_spec['fields']
     f = {}
 

@@ -261,7 +261,7 @@ module OpenMoneyHelper
     when field_type == "boolean"
       select_tag(html_field_name,options_for_select([[l('Yes'), "true"], [l('No'), "false"]],@params[field_name]))
     when field_type == "submit"
-      submit_tag(field_description)
+      submit_tag(field_description,:id=>"commit") << '<span id="commit_processing" style="display:none">Processing...</span>'
     when field_type == "text"
       text_field_tag(html_field_name,@params[field_name])
     when field_type == "float"

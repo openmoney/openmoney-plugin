@@ -176,12 +176,12 @@ module OpenMoneyHelper
   end
   
   def currency_select(html_field_name,selected,account = nil)
-    c = Currency.find(:all).collect{|e| e.omrl.chop}
+    c = Currency.find(:all).collect{|e| e.omrl}
     select_tag(html_field_name,options_for_select(c,selected))
   end
 
   def contexts_select(html_field_name,selected)
-    c = Entity.find(:all, :conditions => "entity_type = 'context' ").collect{|e| e.omrl.chop}
+    c = Entity.find(:all, :conditions => "entity_type = 'context' ").collect{|e| e.omrl}
     select_tag(html_field_name,options_for_select(c,selected))
   end
 

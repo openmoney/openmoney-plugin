@@ -41,7 +41,15 @@ module Specification
     unless @specification
       #TODO: we need magic here to use the value of attribute_name instead of
       # assuming that the attribute is called "specification"
-      @specification = specification ? YAML.load(specification) : {}
+      @specification = if specification
+         if specification =~ /^<\?xml/
+           HashWithIndifferentAccess.new(Hash.from_xml(specification)['specification'])
+         else
+           HashWithIndifferentAccess.new(YAML.load(specification))
+         end
+      else
+        {}
+      end
     end
   end
   

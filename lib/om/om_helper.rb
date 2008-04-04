@@ -111,14 +111,29 @@ module OpenMoneyHelper
     currency_spec = {}
     currency_spec['fields'] = default_mutual_credit_currency_fields(description,taxable,unit)
   	currency_spec['summary_type'] = 'balance(amount)'
+  	currency_spec['history_header'] = {
+      'en' => [{:_date => 'Date'},{:description => 'Description'},{:_with => 'With'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volume'}],
+      'es' => [{:_date => 'Date'},{:description => 'Descripción'},{:_with => 'Con'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volumen'}],
+      'fr' => [{:_date => 'Date'},{:description => 'Description'},{:_with => 'Avec'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volume'}],
+	  }
+  	currency_spec['history_row'] = [
+  	  ':_date',':description',':_with',':_if_with_accepter(amount)',':_if_with_declarer(amount)',':_balance',':_volume'
+  	]
+	  if taxable
+	    currency_spec['history_header']['en'].insert(2,{:taxable => 'Tax?'})
+	    currency_spec['history_header']['es'].insert(2,{:taxable => 'Imponible?'})
+	    currency_spec['history_header']['fr'].insert(2,{:taxable => 'Imposable?'})
+    	currency_spec['history_row'].insert(2,':taxable')
+    end
   	currency_spec['input_form'] = {
   	  'en' => ":declaring_account acknowledges :accepting_account#{description ? ' for :description' : '' } in the amount of :amount #{taxable ? '(taxable :taxable) ' : ''}:acknowledge_flow",
       'es' => ":declaring_account reconoce :accepting_account#{description ? ' por :description' : '' } en la cantidad de :amount #{taxable ? '(ingreso imponible :taxable) ' : ''} :acknowledge_flow",
   	  'fr' => ":declaring_account remercie :accepting_account#{description ? 'pour :description' : '' } et lui verse la somme de :amount #{taxable ? '(imposable :taxable) ' : ''}:acknowledge_flow"
-  	}
+	  }
   	currency_spec['summary_form'] = {
       'en' => "Balance: :balance, Volume :volume",
-      'es' => "Balance: :balance, Volumen :volume"
+      'es' => "Balance: :balance, Volumen :volume",
+      'fr' => "Balance: :balance, Volumen :volume"
   	}
   	currency_spec
   end
@@ -289,40 +304,104 @@ module OpenMoneyHelper
   
   ################################################################################
   # Helper that returns the flows of a currency as specified by the options
-  # as well as the header field names in the correct language.
-  def history(account_omrl,currency_omrl,currency_spec,options = {})
+  def history(account_omrl,currency_omrl,options = {})
     config = {
-      :language  => OpenMoneyDefaultLanguage,
-      :sort_order => nil,
       :count => 20,
       :page => 0,
     }.update(options)
-    sort_order = config[:sort_order]
     params = {:in_currency => currency_omrl }
     params[:with] = account_omrl if account_omrl
     flows = Flow.find(:all, :params => params)
-    fields = currency_spec['fields']
-    f = {}
-
-    fields.keys.each do |name|
-      fspec = get_field_spec(name,fields)
-      type = fspec['type']
-      if type != 'submit'  && type != 'unit'
-        field_description = fspec['description']
-        field_description = field_description[config[:language]] if field_description.is_a?(Hash)
-        f[name] = field_description
-      end
-    end
-    if sort_order =~ /^-(.*)/
-      reverse = true
-      sort_order = $1
-    end
-    if sort_order == nil or sort_order == ''
-      flows = flows.sort_by {|a| a.created_at}.reverse
-    else
-      flows = flows.sort_by {|a| a.specification_attribute(sort_order)}
-    end
-    flows = flows.reverse if reverse
-    [flows,f]
   end
+  
+  ################################################################################
+  # helper that returns an array of rendered flows according to a currency specification
+  # as well as the header field names in the correct language.
+  def render_history(flows,account_omrl,currency_spec,options = {})
+    config = {
+      :language  => OpenMoneyDefaultLanguage,
+      :sort_order => nil
+    }.update(options)
+    history_row = currency_spec['history_row']
+
+    f = []
+    language = config[:language]
+    field_spec = currency_spec["fields"]
+
+    # load the fspecs into a has to be used in rendering the values
+    fspecs = {}
+    field_spec.keys.each {|field| fspecs[field] = get_field_spec(field,field_spec)}
+    
+    flows.each do |flow|
+      the_flow = {}
+      flow_attributes = flow.get_specification
+      puts flow.attributes.inspect
+      history_row.each do |cell|
+        if cell =~ /:([a-zA-Z0-9_-]+)(\((.*)\))*/
+          field = $1
+          params = $3
+          if field =~ /^_/
+            cell_value = case field
+            when '_date'
+              flow.created_at
+            when '_with'
+               flow.specification_attribute('declaring_account') == @account_omrl ? render_field_value(flow,'accepting_account',fspecs['accepting_account'],language) : render_field_value(flow,'declaring_account',fspecs['declaring_account'],language)
+            when '_balance'
+              'NA'
+            when '_volume'
+              'NA'
+            when '_if_with_accepter'
+              flow.specification_attribute('accepting_account') == @account_omrl ? render_field_value(flow,params,fspecs[params],language) : ''
+            when '_if_with_declarer'
+              flow.specification_attribute('declaring_account') == @account_omrl ? render_field_value(flow,params,fspecs[params],language) : ''
+            else
+              "#{field} not implemented"
+            end
+          else            
+            cell_value = render_field_value(flow,field,fspecs[field],language)
+          end
+          the_flow[field.intern] = cell_value
+        end
+      end
+      f << the_flow
+    end
+    
+#    sort_order = config[:sort_order]
+#    if sort_order =~ /^-(.*)/
+#      reverse = true
+#      sort_order = $1
+#    end
+#    if sort_order == nil or sort_order == ''
+#      flows = flows.sort_by {|a| a.created_at}.reverse
+#    else
+#      flows = flows.sort_by {|a| a.specification_attribute(sort_order)}
+#    end
+#    flows = flows.reverse if reverse
+    history_header = currency_spec['history_header']
+    history_header = history_header[language] if history_header.is_a?(Hash)
+    [f,history_header]
+  end
+  
+  def render_field_value(flow,field,fspec,language)
+    value = flow.specification_attribute(field)
+    return value if fspec.nil?
+    field_type = fspec['type']
+    case 
+    when fspec['values_enum']
+      enum = fspec['values_enum']
+      if enum.is_a?(Hash)
+        enum = enum[enum.has_key?(language) ? language : OpenMoneyDefaultLanguage ]
+      end
+      Hash[*enum.map {|x| x.reverse}.flatten][value]
+    when field_type == "boolean"
+      #TODO localize
+      value
+    when field_type == "text"
+      value
+    when field_type == "float"
+       sprintf("%.2f",value)
+    else
+      value
+    end
+  end  
 end

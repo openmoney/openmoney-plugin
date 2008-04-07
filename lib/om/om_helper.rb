@@ -112,19 +112,25 @@ module OpenMoneyHelper
     currency_spec['fields'] = default_mutual_credit_currency_fields(description,taxable,unit)
   	currency_spec['summary_type'] = 'balance(amount)'
   	currency_spec['history_header'] = {
-      'en' => [{:_date => 'Date'},{:description => 'Description'},{:_with => 'With'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volume'}],
-      'es' => [{:_date => 'Date'},{:description => 'Descripción'},{:_with => 'Con'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volumen'}],
-      'fr' => [{:_date => 'Date'},{:description => 'Description'},{:_with => 'Avec'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'},{:_balance => 'Balance'},{:_volume => 'Volume'}],
+      'en' => [{:_date => 'Date'},{:_with => 'With'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'}], #,{:_balance => 'Balance'},{:_volume => 'Volume'}
+      'es' => [{:_date => 'Fecha'},{:_with => 'Con'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'}], #,{:_balance => 'Balance'},{:_volume => 'Volumen'}
+      'fr' => [{:_date => 'Jour'},{:_with => 'Avec'},{:_if_with_accepter => '+'},{:_if_with_declarer => '-'}], #,{:_balance => 'Balance'},{:_volume => 'Volume'}
 	  }
   	currency_spec['history_row'] = [
-  	  ':_date',':description',':_with',':_if_with_accepter(amount)',':_if_with_declarer(amount)',':_balance',':_volume'
+  	  ':_date',':_with',':_if_with_accepter(amount)',':_if_with_declarer(amount)'#,':_balance',':_volume'
   	]
 	  if taxable
-	    currency_spec['history_header']['en'].insert(2,{:taxable => 'Tax?'})
-	    currency_spec['history_header']['es'].insert(2,{:taxable => 'Imponible?'})
-	    currency_spec['history_header']['fr'].insert(2,{:taxable => 'Imposable?'})
-    	currency_spec['history_row'].insert(2,':taxable')
+	    currency_spec['history_header']['en'].insert(1,{:taxable => 'Tax?'})
+	    currency_spec['history_header']['es'].insert(1,{:taxable => 'Imponible?'})
+	    currency_spec['history_header']['fr'].insert(1,{:taxable => 'Imposable?'})
+    	currency_spec['history_row'].insert(1,':taxable')
     end
+  	if description
+	    currency_spec['history_header']['en'].insert(1,{:description => 'Description'})
+	    currency_spec['history_header']['es'].insert(1,{:description => 'Descripción'})
+	    currency_spec['history_header']['fr'].insert(1,{:description => 'Description?'})
+    	currency_spec['history_row'].insert(1,':description')
+	  end
   	currency_spec['input_form'] = {
   	  'en' => ":declaring_account acknowledges :accepting_account#{description ? ' for :description' : '' } in the amount of :amount #{taxable ? '(taxable :taxable) ' : ''}:acknowledge_flow",
       'es' => ":declaring_account reconoce :accepting_account#{description ? ' por :description' : '' } en la cantidad de :amount #{taxable ? '(ingreso imponible :taxable) ' : ''} :acknowledge_flow",
@@ -147,28 +153,28 @@ module OpenMoneyHelper
       },
       'values_enum' =>   {
     		"2qual" => {
-          'en' => [['Good',1],['Bad',2]],
-          'es' => [['Bueno',1],['Malo',2]],
+          'en' => [['Good',"1"],['Bad',"2"]],
+          'es' => [['Bueno',"1"],['Malo',"2"]],
         },
     		"2yesno" => {
-    		  'en' => [['Yes',2],['No',1]],
-    		  'es' => [['Si',2],['No',1]],
+    		  'en' => [['Yes',"2"],['No',"1"]],
+    		  'es' => [['Si',"2"],['No',"1"]],
     		},
     		"3qual" => {
-    		  'en' => [['Good',3],['Average',2],['Bad',1]],
-    		  'es' => [['Bueno',3],['Mediano',2],['Malo',1]],
+    		  'en' => [['Good',"3"],['Average',"2"],['Bad',"1"]],
+    		  'es' => [['Bueno',"3"],['Mediano',"2"],['Malo',"1"]],
     		},
     		"4qual" => {
-    		  'en' => [['Excellent',4],['Good',3],['Average',2],['Bad',1]],
-    		  'es' => [['Excellente',4],['Bueno',3],['Mediano',2],['Malo',1]],
+    		  'en' => [['Excellent',"4"],['Good','3'],['Average','2'],['Bad','1']],
+    		  'es' => [['Excellente','4'],['Bueno','3'],['Mediano','2'],['Malo','1']],
     		},
-    		"3stars" => [['***',3],['**',2],['*',1]],
-    		"4stars" => [['****',4],['***',3],['**',2],['*',1]],
-    		"5stars" => [['*****',5],['****',4],['***',3],['**',2],['*',1]],
-    		"3" => (1..3).to_a,
-    		"4" => (1..4).to_a,
-    		"5" => (1..5).to_a,
-    		"10" => (1..10).to_a
+    		"3stars" => [['***','3'],['**','2'],['*','1']],
+    		"4stars" => [['****','4'],['***','3'],['**','2'],['*','1']],
+    		"5stars" => [['*****','5'],['****','4'],['***','3'],['**','2'],['*','1']],
+    		"3" => ('1'..'3').to_a,
+    		"4" => ('1'..'4').to_a,
+    		"5" => ('1'..'5').to_a,
+    		"10" => ('1'..'10').to_a
       }[rating_type]
     }      
     currency_spec = {}
@@ -178,6 +184,14 @@ module OpenMoneyHelper
     	},
       'rating' => r,
     }
+  	currency_spec['history_header'] = {
+      'en' => [{:_date => 'Date'},{:declaring_account => 'From'},{:accepting_account => 'To'},{:rating => 'Rating'}],
+      'es' => [{:_date => 'Fecha'},{:declaring_account => 'De'},{:accepting_account => 'Para'},{:rating => 'Calificacion'}],
+      'fr' => [{:_date => 'Jour'},{:declaring_account => 'De'},{:accepting_account => 'Á'},{:rating => 'Rating'}]
+	  }
+  	currency_spec['history_row'] = [
+  	  ':_date',':declaring_account',':accepting_account',':rating'#,':_balance',':_volume'
+  	]
   	currency_spec['summary_type'] = 'average(rating)'
   	currency_spec['input_form'] = {
   	  'en' => ":declaring_account rates :accepting_account as :rating :rate",
@@ -217,18 +231,19 @@ module OpenMoneyHelper
   #  +langauge
   #  +pre_specified_fields: hash used to to display values (like a declaring_account)
   #   instead of asking the user for them.
-  def input_form(currency_spec,options = {})
+  def input_form(field_values,currency_spec,options = {})
     language = options[:language] ||= OpenMoneyDefaultLanguage
     pre_specified_fields = options[:pre_specified_fields]
     
     field_spec = currency_spec["fields"]
     form = currency_spec["input_form"][language]
     form ||= currency_spec["input_form"][OpenMoneyDefaultLanguage]
-    form.gsub(/:([a-zA-Z0-9_-]+)/) do |m| 
-      if pre_specified_fields && pre_specified_fields.has_key?($1)
-        pre_specified_fields[$1]
+    form.gsub(/:([a-zA-Z0-9_-]+)/) do |m|
+      field_name = $1
+      if pre_specified_fields && pre_specified_fields.has_key?(field_name)
+        pre_specified_fields[field_name]
       else
-        render_field($1,field_spec,language)
+        render_field(field_values[field_name],field_name,get_field_spec(field_name,field_spec),language)
       end
     end
   end
@@ -254,37 +269,60 @@ module OpenMoneyHelper
     fspec['description'] ||= field_name.gsub(/_/,' ').capitalize
     fspec
   end
+  
+  def get_field_names(fields_spec,language = OpenMoneyDefaultLanguage,except = nil)
+    field_names = {}
+    n = fields_spec.keys
+    n = n - except.map {|e| e.to_s} if except
+    n.each do |field_name|
+      fspec = get_field_spec(field_name,fields_spec)
+      if !['unit','submit'].include?(fspec['type'])
+        field_description = get_language_translated_spec(fspec,'description',language)
+        field_names[field_name] = field_description
+      end
+    end
+    field_names
+  end
+  
+  def get_language_translated_spec(spec,spec_name,language)
+    s = spec[spec_name]
+    if s.is_a?(Hash)
+      if s.has_key?(language)
+        s = s[language] 
+      else
+        s = s[OpenMoneyDefaultLanguage]
+      end
+    end
+    s
+  end
 
   ################################################################################
   # renders and individual field in the input form specification according to choosen language
-  def render_field(field_name,field_spec,language = OpenMoneyDefaultLanguage)
-    fspec = get_field_spec(field_name,field_spec)
-
+  def render_field(field_value,field_name,field_spec,language = OpenMoneyDefaultLanguage)
     html_field_name = "flow_spec[#{field_name}]"
 
-    field_description = fspec['description']
-    field_description = field_description[language] if field_description.is_a?(Hash)
+    field_description = get_language_translated_spec(field_spec,'description',language)
 
-    field_type = fspec['type']
+    field_type = field_spec['type']
     case 
-    when fspec['values_enum']
-      enum = fspec['values_enum']
+    when field_spec['values_enum']
+      enum = field_spec['values_enum']
       if enum.is_a?(Hash)
         enum = enum[enum.has_key?(language) ? language : OpenMoneyDefaultLanguage ]
       end
-      select_tag(html_field_name,options_for_select(enum,@params[field_name]))
+      select_tag(html_field_name,options_for_select(enum,field_value))
     when field_type == "boolean"
-      select_tag(html_field_name,options_for_select([[l('Yes'), "true"], [l('No'), "false"]],@params[field_name]))
+      select_tag(html_field_name,options_for_select([[l('Yes'), "true"], [l('No'), "false"]],field_value))
     when field_type == "submit"
       submit_tag(field_description,:id=>"commit") << '<span id="commit_processing" style="display:none">Processing...</span>'
     when field_type == "text"
-      text_field_tag(html_field_name,@params[field_name])
+      text_field_tag(html_field_name,field_value)
     when field_type == "float"
-      text_field_tag(html_field_name,@params[field_name])
+      text_field_tag(html_field_name,field_value)
     when field_type == "unit"
       UnitToHTMLMap[field_name]
     else
-      text_field_tag(field_name,@params[field_name])
+      text_field_tag(field_name,field_value)
     end
   end
 
@@ -326,19 +364,21 @@ module OpenMoneyHelper
 
     f = []
     language = config[:language]
-    field_spec = currency_spec["fields"]
+    field_specs = currency_spec["fields"]
 
     # load the fspecs into a has to be used in rendering the values
+    field_names_as_symbols = []
     fspecs = {}
-    field_spec.keys.each {|field| fspecs[field] = get_field_spec(field,field_spec)}
-    
+    field_specs.keys.each {|field| fspecs[field] = get_field_spec(field,field_specs)}
+        
     flows.each do |flow|
       the_flow = {}
+      used_fields = {}
       flow_attributes = flow.get_specification
-      puts flow.attributes.inspect
       history_row.each do |cell|
         if cell =~ /:([a-zA-Z0-9_-]+)(\((.*)\))*/
           field = $1
+          used_fields[field] = 1
           params = $3
           if field =~ /^_/
             cell_value = case field
@@ -363,6 +403,7 @@ module OpenMoneyHelper
           the_flow[field.intern] = cell_value
         end
       end
+      (field_specs.keys - the_flow.keys {|fi| fi.to_s}).each {|fl| the_flow[fl.intern] = render_field_value(flow,fl,fspecs[fl],language)}
       f << the_flow
     end
     
@@ -377,8 +418,7 @@ module OpenMoneyHelper
 #      flows = flows.sort_by {|a| a.specification_attribute(sort_order)}
 #    end
 #    flows = flows.reverse if reverse
-    history_header = currency_spec['history_header']
-    history_header = history_header[language] if history_header.is_a?(Hash)
+    history_header = get_language_translated_spec(currency_spec,'history_header',language)
     [f,history_header]
   end
   

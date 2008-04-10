@@ -418,6 +418,7 @@ module OpenMoneyHelper
 #      flows = flows.sort_by {|a| a.specification_attribute(sort_order)}
 #    end
 #    flows = flows.reverse if reverse
+    f = f.reverse
     history_header = get_language_translated_spec(currency_spec,'history_header',language)
     [f,history_header]
   end
